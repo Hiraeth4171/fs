@@ -1,5 +1,5 @@
 build:
-	gcc -c src/fs.c -o obj/fs.o
+	gcc -c -ggdb src/fs.c -o obj/fs.o
 	ar rcs bin/libfs.a obj/fs.o
 
 setup:

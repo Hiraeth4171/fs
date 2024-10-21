@@ -15,7 +15,10 @@
 #define WATCH_SIZE 16
 
 int inotify_fd = -1;
-FileHandler **watches; 
+FileHandler **watches = NULL; 
+size_t watches_cap = WATCH_SIZE;
+
+callback_t *callbacks = NULL;
 
 void fs_init(bool watch) {
     if (watch) {
@@ -24,7 +27,19 @@ void fs_init(bool watch) {
             error(-1, errno, "ERROR: failed to initialize inotify");
         }
         watches = malloc(WATCH_SIZE * sizeof(FileHandler*));
+        callbacks = malloc(WATCH_SIZE * sizeof(callback_t));
         if (watches == NULL) error(-3, errno, "ERROR: failed to initialize inotify");
+    }
+}
+
+void fs_terminate(bool watch) {
+    if (watch) {
+        if (inotify_fd < 0) return; // fs_init was never ran
+        int _res = close(inotify_fd);
+        if (_res < 0) {
+            error(-1, errno, "ERROR: failed to terminate inotify");
+        }
+        free(watches);
     }
 }
 
@@ -61,12 +76,19 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode) {
     return fh;
 }
 
-int fs_watch_filehandler(FileHandler* fh, uint32_t mask) {
+int fs_watch_filehandler(FileHandler* fh, uint32_t mask, callback_t callback) {
     int wd = inotify_add_watch(inotify_fd, fh->file_path, mask);
     if (wd < 0) {
         error(-1, errno, "ERROR: failed to add watch");
     }
+    if (wd > watches_cap) {
+        FileHandler** tmp1 = realloc(watches, (watches_cap += 8) * sizeof(FileHandler*));
+        if (tmp1 == NULL) error(-3, errno, "ERROR: failed to add watch");
+        callback_t* tmp2 = realloc(callbacks, watches_cap * sizeof(callback_t));
+        if (tmp2 == NULL) error(-3, errno, "ERROR: failed to add watch");
+    }
     watches[wd-1] = fh;
+    callbacks[wd-1] = callback;
     fh->wd[fh->i++] = wd;
     return wd;
 }
@@ -81,7 +103,7 @@ void fs_destroy_filehandler(FileHandler *fh) {
 
 int fs_start_watching() {
     char buff[4096] __attribute__ ((aligned(__alignof__(struct inotify_event))));
-    const struct inotify_event *event;
+    struct inotify_event *event;
     ssize_t len;
     printf("started watching!\n");
     for (;;) {
@@ -91,18 +113,8 @@ int fs_start_watching() {
         }
         if (len <= 0) break;
         for (char *ptr = buff; ptr < buff + len; ptr += sizeof(struct inotify_event) + event->len) {
-            event = (const struct inotify_event*) ptr;
-            if (event->mask & IN_OPEN)
-                printf("IN_OPEN: ");
-            if (event->mask & IN_CLOSE_NOWRITE)
-                printf("IN_CLOSE_NOWRITE: ");
-            if (event->mask & IN_CLOSE_WRITE)
-                printf("IN_CLOSE_WRITE: ");
-            if (event->len) printf("%s ", event->name);
-            if (event->mask & IN_ISDIR) printf("[DIR]\n");
-            else printf("[FIL]\n");
-            FileHandler *tmp;
-            if ((tmp = watches[event->wd-1]) != NULL) printf("%d: %s\n", tmp->wd[0], tmp->file_path);
+            event = (struct inotify_event*) ptr;
+            callbacks[event->wd-1](event, watches[event->wd-1]);
         }
     }
     return 0;
