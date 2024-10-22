@@ -8,6 +8,8 @@
 #include <sys/inotify.h>
 #include <sys/stat.h>
 
+#include <pthread.h>
+
 #define bool _Bool 
 #define false 1
 #define true 0
@@ -101,11 +103,23 @@ void fs_destroy_filehandler(FileHandler *fh) {
     if (inotify_fd != -1) close(inotify_fd);
 }
 
-int fs_start_watching() {
+void *fs_callback_event(void *_event) {
+    pthread_detach(pthread_self());
+    struct inotify_event *event = (struct inotify_event *) _event;
+    callbacks[event->wd-1](event, watches[event->wd-1]);
+    pthread_exit(NULL);
+}
+
+void *fs_watch_thread_func(void *arg) {
+
+    pthread_detach(pthread_self());
+
     char buff[4096] __attribute__ ((aligned(__alignof__(struct inotify_event))));
     struct inotify_event *event;
     ssize_t len;
     printf("started watching!\n");
+
+    printf("thread created!\n");
     for (;;) {
         len = read(inotify_fd, buff, sizeof(buff));
         if (len == -1 && errno != EAGAIN) {
@@ -114,8 +128,15 @@ int fs_start_watching() {
         if (len <= 0) break;
         for (char *ptr = buff; ptr < buff + len; ptr += sizeof(struct inotify_event) + event->len) {
             event = (struct inotify_event*) ptr;
-            callbacks[event->wd-1](event, watches[event->wd-1]);
+            pthread_t pstid;
+            pthread_create(&pstid, NULL, fs_callback_event, (void*)event);
         }
     }
+    pthread_exit(NULL);
+}
+
+int fs_start_watching() {
+    pthread_t ptid;
+    pthread_create(&ptid, NULL, fs_watch_thread_func, NULL);
     return 0;
 }
