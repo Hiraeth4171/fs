@@ -32,7 +32,10 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode);
 void fs_destroy_filehandler(FileHandler* fh);
 int fs_watch_filehandler(FileHandler* fh, uint32_t mask, callback_t callback);
 void fs_terminate(_Bool watch);
-int fs_start_watching(); // spawns a thread for the event loop
+int fs_start_watching(void); // spawns a thread for the event loop
+int fs_stop_watching(void); // spawns a thread for the event loop
+
+const char* fs_get_mimetype(FileHandler* fh);
 
 void clean_test(void);
 

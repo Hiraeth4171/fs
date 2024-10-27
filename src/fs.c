@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 
 #include <pthread.h>
+#include <magic.h>
+#include <string.h>
 
 #define bool _Bool 
 #define false 1
@@ -22,6 +24,9 @@ size_t watches_cap = WATCH_SIZE;
 
 callback_t *callbacks = NULL;
 
+pthread_t watch_thread_id;
+magic_t magic_db;
+
 void fs_init(bool watch) {
     if (watch) {
         inotify_fd = inotify_init();
@@ -32,6 +37,8 @@ void fs_init(bool watch) {
         callbacks = malloc(WATCH_SIZE * sizeof(callback_t));
         if (watches == NULL) error(-3, errno, "ERROR: failed to initialize inotify");
     }
+    magic_db = magic_open(MAGIC_CONTINUE|MAGIC_ERROR|MAGIC_MIME_TYPE);
+    magic_load(magic_db, NULL);
 }
 
 void fs_terminate(bool watch) {
@@ -43,6 +50,7 @@ void fs_terminate(bool watch) {
         }
         free(watches);
     }
+    magic_close(magic_db);
 }
 
 FileHandler* fs_create_filehandler(char* file_path, char* mode) {
@@ -97,10 +105,11 @@ int fs_watch_filehandler(FileHandler* fh, uint32_t mask, callback_t callback) {
 
 void fs_destroy_filehandler(FileHandler *fh) {
     int _res = 1;
+    if (fh == NULL) return;
     if (fh->fd != NULL) fclose(fh->fd);
     if (_res == EOF) error(0, errno, "ERROR: failed to destroy FileHandler");
     if (fh->buff != NULL) free(fh->buff);
-    if (inotify_fd != -1) close(inotify_fd);
+    free(fh);
 }
 
 void *fs_callback_event(void *_event) {
@@ -112,14 +121,9 @@ void *fs_callback_event(void *_event) {
 
 void *fs_watch_thread_func(void *arg) {
 
-    pthread_detach(pthread_self());
-
     char buff[4096] __attribute__ ((aligned(__alignof__(struct inotify_event))));
     struct inotify_event *event;
     ssize_t len;
-    printf("started watching!\n");
-
-    printf("thread created!\n");
     for (;;) {
         len = read(inotify_fd, buff, sizeof(buff));
         if (len == -1 && errno != EAGAIN) {
@@ -136,7 +140,50 @@ void *fs_watch_thread_func(void *arg) {
 }
 
 int fs_start_watching() {
-    pthread_t ptid;
-    pthread_create(&ptid, NULL, fs_watch_thread_func, NULL);
+    pthread_create(&watch_thread_id, NULL, fs_watch_thread_func, NULL);
     return 0;
+}
+
+int fs_stop_watching(void) {
+    pthread_cancel(watch_thread_id);
+    pthread_join(watch_thread_id, NULL);
+    return 0;
+}
+
+char* fs_get_file_extension(const char* file_path) {
+    char* _res = malloc(10);
+    if (_res == NULL) error(-2, errno, "failed to get file extension");
+    const char* ptr = file_path;
+    for(; *ptr != '.' && *ptr != '\0'; ptr++) {
+
+    }
+    if (*ptr == '.') {
+        size_t temp = (file_path + strlen(file_path)) - ptr;
+            strncpy(_res, ptr+1, temp);
+            return _res;
+    }
+    else return NULL;
+}
+
+const char* fs_get_mimetype(FileHandler* fh) {
+    if (fh == NULL) return "No FileHandler";
+    if (fh->file_path == NULL) return "No file path";
+    const char* out = magic_file(magic_db, fh->file_path);
+    if (strcmp(out, "text/plain") == 0) {
+        char* file_ext = fs_get_file_extension(fh->file_path);
+        if (file_ext == NULL) return out;
+        switch (file_ext[0]) {
+            case 'h':
+                printf("h found\n");
+                if (strcmp(file_ext, "html") == 0) return "text/html";
+                if (strcmp(file_ext, "htm") == 0) return "text/html";
+                break;
+            case 'c':
+                if (strcmp(file_ext, "css") == 0) return "text/css";
+                break;
+            case 'j':
+                if (file_ext[1] == 's') return "text/javascript";
+        }
+    }
+    return out;
 }
