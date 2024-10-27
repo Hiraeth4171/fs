@@ -181,8 +181,11 @@ const char* fs_get_mimetype(FileHandler* fh) {
             case 'c':
                 if (strcmp(file_ext, "css") == 0) return "text/css";
                 break;
-            case 'j':
+            case 'j': case 'm':
+                if (strcmp(file_ext, "json") == 0) return "application/json";
                 if (file_ext[1] == 's') return "text/javascript";
+                if (file_ext[1] == 'j' && file_ext[2] == 's') return "text/javascript";
+                break;
         }
     }
     return out;
