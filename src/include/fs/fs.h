@@ -37,6 +37,9 @@ int fs_stop_watching(void); // spawns a thread for the event loop
 
 const char* fs_get_mimetype(FileHandler* fh);
 
+void fs_read_filehandler(FileHandler* fh);
+void fs_memory_map_filehandler(FileHandler* fh);
+
 void clean_test(void);
 
 #endif 

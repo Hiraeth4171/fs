@@ -169,24 +169,52 @@ const char* fs_get_mimetype(FileHandler* fh) {
     if (fh == NULL) return "No FileHandler";
     if (fh->file_path == NULL) return "No file path";
     const char* out = magic_file(magic_db, fh->file_path);
-    if (strcmp(out, "text/plain") == 0) {
+    if (strcmp(out, "text/plain") == 0 || strncmp(out, "application/json", 17)) {
         char* file_ext = fs_get_file_extension(fh->file_path);
         if (file_ext == NULL) return out;
+        // clean up the switch
         switch (file_ext[0]) {
             case 'h':
-                printf("h found\n");
-                if (strcmp(file_ext, "html") == 0) return "text/html";
-                if (strcmp(file_ext, "htm") == 0) return "text/html";
+                if (strcmp(file_ext, "html") == 0 || strcmp(file_ext, "htm") == 0) {
+                    free(file_ext);
+                    return "text/html";
+                }
                 break;
             case 'c':
-                if (strcmp(file_ext, "css") == 0) return "text/css";
+                if (strcmp(file_ext, "css") == 0) {
+                    free(file_ext);
+                    return "text/css";
+                }
                 break;
             case 'j': case 'm':
-                if (strcmp(file_ext, "json") == 0) return "application/json";
-                if (file_ext[1] == 's') return "text/javascript";
-                if (file_ext[1] == 'j' && file_ext[2] == 's') return "text/javascript";
+                if (strcmp(file_ext, "json") == 0) {
+                    free(file_ext);
+                    return "application/json";
+                }
+                if (file_ext[1] == 's' || (file_ext[1] == 'j' && file_ext[2] == 's')) {
+                    free(file_ext);
+                    return "text/javascript";
+                }
                 break;
         }
     }
     return out;
+}
+
+void fs_read_filehandler(FileHandler* fh) {
+    if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
+    if (fh->fd == NULL) error(-3, 0, "ERROR: filehandler given for read handles a directory");
+    fseek(fh->fd, 0L, SEEK_END);
+    long pos = ftell(fh->fd);
+    fh->size = (size_t) pos;
+    rewind(fh->fd);
+    if (fh->buff != NULL) free(fh->buff);
+    fh->buff = malloc(pos+1);
+    fread(fh->buff, 1, pos, fh->fd);
+    fh->buff[pos] = '\0';
+}
+
+void fs_memory_map_filehandler(FileHandler* fh) {
+    // add code later
+    return;
 }
