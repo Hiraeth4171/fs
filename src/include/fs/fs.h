@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/inotify.h>
+#include <dirent.h>
 
 #define WD_LIMIT_PER_FILE 5
 
@@ -23,6 +24,7 @@ struct FileHandler {
     int wd[WD_LIMIT_PER_FILE];
     size_t size;
     char* buff;
+    DIR* directory_stream;
 };
 
 typedef void (*callback_t)(struct inotify_event*, FileHandler*);
@@ -38,6 +40,7 @@ int fs_stop_watching(void); // spawns a thread for the event loop
 const char* fs_get_mimetype(FileHandler* fh);
 
 void fs_read_filehandler(FileHandler* fh);
+char* fs_stream_from_dir(FileHandler* fh);
 void fs_memory_map_filehandler(FileHandler* fh);
 
 void clean_test(void);

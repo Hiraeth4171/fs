@@ -1,4 +1,5 @@
 #include "./include/fs/fs.h"
+#include <dirent.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -72,6 +73,12 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode) {
         return NULL;
     }
     if (s.st_mode & S_IFDIR) {
+        DIR* _dir_stream = opendir(file_path);
+        if (_dir_stream == NULL) {
+            error(0, errno, "ERROR: failed to create FileHandler");
+            return NULL;
+        }
+        fh->directory_stream = _dir_stream;
         fh->fd = NULL;
     }
     else if (s.st_mode & S_IFREG) {
@@ -81,6 +88,7 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode) {
             return NULL;
         }
         fh->fd = fd;
+        fh->directory_stream = NULL;
     }
     fh->file_path = file_path;
     return fh;
@@ -212,6 +220,18 @@ void fs_read_filehandler(FileHandler* fh) {
     fh->buff = malloc(pos+1);
     fread(fh->buff, 1, pos, fh->fd);
     fh->buff[pos] = '\0';
+}
+
+char* fs_stream_from_dir(FileHandler* fh) {
+    if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
+    if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
+    errno = 0;
+    struct dirent* _dir = readdir(fh->directory_stream);
+    if (_dir == NULL) {
+        if (errno != 0) error(0, errno, "ERROR: directory read failed: %d", errno);
+        return NULL;
+    }
+    return _dir->d_name;
 }
 
 void fs_memory_map_filehandler(FileHandler* fh) {
