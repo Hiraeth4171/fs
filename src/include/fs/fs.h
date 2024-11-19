@@ -41,6 +41,7 @@ const char* fs_get_mimetype(FileHandler* fh);
 
 void fs_read_filehandler(FileHandler* fh);
 char* fs_stream_from_dir(FileHandler* fh);
+size_t fs_dir_len(FileHandler* fh);
 void fs_memory_map_filehandler(FileHandler* fh);
 
 void clean_test(void);

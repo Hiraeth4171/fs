@@ -233,6 +233,15 @@ char* fs_stream_from_dir(FileHandler* fh) {
     }
     return _dir->d_name;
 }
+size_t fs_dir_len (FileHandler* fh) {
+    if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
+    if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
+    errno = 0;
+    seekdir(fh->directory_stream, SEEK_END);
+    size_t len = telldir(fh->directory_stream) - 1; // to ignore '.'
+    rewinddir(fh->directory_stream);
+    return len;
+}
 
 void fs_memory_map_filehandler(FileHandler* fh) {
     // add code later
