@@ -1,4 +1,6 @@
 build:
+	mkdir -p obj
+	mkdir -p bin
 	gcc -c -ggdb src/fs.c -o obj/fs.o
 	ar rcs bin/libfs.a obj/fs.o
 
