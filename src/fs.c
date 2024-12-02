@@ -222,6 +222,14 @@ void fs_read_filehandler(FileHandler* fh) {
     fh->buff[pos] = '\0';
 }
 
+void fs_delete_file(FileHandler* fh) {
+    if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to delete is NULL");
+    if (fh->fd == NULL) error(-3, 0, "ERROR: filehandler given for delete handles a directory");
+    const char* tmp = fh->file_path;
+    fs_destroy_filehandler(fh);
+    remove(tmp);
+}
+
 char* fs_stream_from_dir(FileHandler* fh) {
     if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
     if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
