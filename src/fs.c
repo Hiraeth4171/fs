@@ -20,8 +20,7 @@
 #define WATCH_SIZE 16
 
 #define mem_read(dst, src, len)\
-    memcpy((dst), (src), (len));\
-    (src)+=(len);
+    memcpy((dst), (src), (len));
 
 int inotify_fd = -1;
 FileHandler **watches = NULL; 
@@ -100,8 +99,8 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode) {
 
 ByteReader* fs_create_byte_reader(char* file_path) {
     FileHandler* fh = fs_create_filehandler(file_path, "rb");
-    if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
-    if (fh->fd == NULL) error(-3, 0, "ERROR: filehandler given for read handles a directory");
+    if (fh == NULL) error(-3, 0, "ERROR: byte reader you were trying to read is NULL");
+    if (fh->fd == NULL) error(-3, 0, "ERROR: byte reader given for read handles a directory");
     fs_read_filehandler(fh);
     ByteReader* _res = malloc(sizeof(ByteReader));
     _res->fh = fh;
@@ -109,6 +108,23 @@ ByteReader* fs_create_byte_reader(char* file_path) {
     _res->_end = fh->buff+fh->size;
     _res->_offset = 0;
     return _res;
+}
+
+void* fs_br_read(ByteReader* byte_reader, size_t n) {
+    if (byte_reader->_offset+n > byte_reader->fh->size) {
+        n = byte_reader->fh->size - byte_reader->_offset;
+    } // trim end if overflow'd
+    char* _res = malloc(n);
+    mem_read(_res, byte_reader->_start+byte_reader->_offset, n);
+    byte_reader->_offset+=n;
+    return (void*)_res;
+}
+void fs_br_seek(ByteReader* byte_reader, size_t offset) {
+    if (byte_reader->_offset+offset > byte_reader->fh->size) {
+        byte_reader->_offset = byte_reader->fh->size;
+    } else {
+        byte_reader->_offset = offset;
+    }
 }
 
 int fs_watch_filehandler(FileHandler* fh, uint32_t mask, callback_t callback) {
