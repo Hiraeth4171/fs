@@ -10,10 +10,11 @@
 
 /*
  *  FileHandler [ fd, buffer, size ]
- *  - need a way to bind events to file handlers
- *      - inotify
- *  - read files, write to files, access files, file permissions, etc etc
- *  - mimetypes and other file stats
+ *  - need a way to bind events to file handlers [x]
+ *      - inotify [x]
+ *      - windows [ ]
+ *  - read files, write to files, access files, file permissions, etc etc [~]
+ *  - mimetypes and other file stats [~]
  * */
 
 typedef struct FileHandler FileHandler;
@@ -27,6 +28,14 @@ struct FileHandler {
     DIR* directory_stream;
 };
 
+typedef struct ByteReader ByteReader;
+struct ByteReader {
+    FileHandler* fh;
+    char* _start;
+    char* _end;
+    size_t _offset;
+};
+
 typedef void (*callback_t)(struct inotify_event*, FileHandler*);
 
 void fs_init(_Bool watch);
@@ -36,6 +45,9 @@ int fs_watch_filehandler(FileHandler* fh, uint32_t mask, callback_t callback);
 void fs_terminate(_Bool watch);
 int fs_start_watching(void); // spawns a thread for the event loop
 int fs_stop_watching(void); // spawns a thread for the event loop
+
+ByteReader* fs_create_byte_reader(char* file_path);
+void fs_destroy_byte_reader(ByteReader* byte_reader);
 
 const char* fs_get_mimetype(FileHandler* fh);
 

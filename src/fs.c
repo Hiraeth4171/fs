@@ -19,6 +19,10 @@
 
 #define WATCH_SIZE 16
 
+#define mem_read(dst, src, len)\
+    memcpy((dst), (src), (len));\
+    (src)+=(len);
+
 int inotify_fd = -1;
 FileHandler **watches = NULL; 
 size_t watches_cap = WATCH_SIZE;
@@ -94,6 +98,19 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode) {
     return fh;
 }
 
+ByteReader* fs_create_byte_reader(char* file_path) {
+    FileHandler* fh = fs_create_filehandler(file_path, "rb");
+    if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
+    if (fh->fd == NULL) error(-3, 0, "ERROR: filehandler given for read handles a directory");
+    fs_read_filehandler(fh);
+    ByteReader* _res = malloc(sizeof(ByteReader));
+    _res->fh = fh;
+    _res->_start = fh->buff;
+    _res->_end = fh->buff+fh->size;
+    _res->_offset = 0;
+    return _res;
+}
+
 int fs_watch_filehandler(FileHandler* fh, uint32_t mask, callback_t callback) {
     int wd = inotify_add_watch(inotify_fd, fh->file_path, mask);
     if (wd < 0) {
@@ -118,6 +135,11 @@ void fs_destroy_filehandler(FileHandler *fh) {
     if (_res == EOF) error(0, errno, "ERROR: failed to destroy FileHandler");
     if (fh->buff != NULL) free(fh->buff);
     free(fh);
+}
+
+void fs_destroy_byte_reader(ByteReader* byte_reader) {
+    fs_destroy_filehandler(byte_reader->fh);
+    free(byte_reader);
 }
 
 void *fs_callback_event(void *_event) {
