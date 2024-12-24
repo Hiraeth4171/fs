@@ -97,8 +97,8 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode) {
     return fh;
 }
 
-ByteReader* fs_create_byte_reader(char* file_path) {
-    FileHandler* fh = fs_create_filehandler(file_path, "rb");
+ByteReader* fs_create_byte_reader(const char* file_path) {
+    FileHandler* fh = fs_create_filehandler((char*)file_path, "rb");
     if (fh == NULL) error(-3, 0, "ERROR: byte reader you were trying to read is NULL");
     if (fh->fd == NULL) error(-3, 0, "ERROR: byte reader given for read handles a directory");
     fs_read_filehandler(fh);

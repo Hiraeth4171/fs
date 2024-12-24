@@ -46,7 +46,7 @@ void fs_terminate(_Bool watch);
 int fs_start_watching(void); // spawns a thread for the event loop
 int fs_stop_watching(void); // spawns a thread for the event loop
 
-ByteReader* fs_create_byte_reader(char* file_path);
+ByteReader* fs_create_byte_reader(const char* file_path);
 void* fs_br_read(ByteReader* byte_reader, size_t n);
 void fs_br_seek(ByteReader* byte_reader, size_t offset);
 void fs_destroy_byte_reader(ByteReader* byte_reader);
