@@ -5,7 +5,7 @@ build:
 	ar rcs bin/libfs.a obj/fs.o
 
 setup:
-	mkdir obj bin
+	mkdir -p obj bin
 
 install:
 	sudo cp bin/libfs.a /usr/lib

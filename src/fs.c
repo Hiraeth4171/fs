@@ -120,7 +120,7 @@ void* fs_br_read(ByteReader* byte_reader, size_t n) {
     return (void*)_res;
 }
 void fs_br_seek(ByteReader* byte_reader, size_t offset) {
-    if (byte_reader->_offset+offset > byte_reader->fh->size) {
+    if (offset > byte_reader->fh->size) {
         byte_reader->_offset = byte_reader->fh->size;
     } else {
         byte_reader->_offset = offset;
