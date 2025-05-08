@@ -51,6 +51,7 @@ void* fs_br_read(ByteReader* byte_reader, size_t n);
 void fs_br_seek(ByteReader* byte_reader, size_t offset);
 void fs_destroy_byte_reader(ByteReader* byte_reader);
 
+const char* fs_get_mimetype_raw(const char* path);
 const char* fs_get_mimetype(FileHandler* fh);
 
 void fs_read_filehandler(FileHandler* fh);

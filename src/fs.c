@@ -211,12 +211,10 @@ char* fs_get_file_extension(const char* file_path) {
     else return NULL;
 }
 
-const char* fs_get_mimetype(FileHandler* fh) {
-    if (fh == NULL) return "No FileHandler";
-    if (fh->file_path == NULL) return "No file path";
-    const char* out = magic_file(magic_db, fh->file_path);
+const char* fs_get_mimetype_raw(const char* path) {
+    const char* out = magic_file(magic_db, path);
     if (strcmp(out, "text/plain") == 0 || strncmp(out, "application/json", 17)) {
-        char* file_ext = fs_get_file_extension(fh->file_path);
+        char* file_ext = fs_get_file_extension(path);
         if (file_ext == NULL) return out;
         // clean up the switch
         switch (file_ext[0]) {
@@ -246,6 +244,13 @@ const char* fs_get_mimetype(FileHandler* fh) {
     }
     return out;
 }
+
+const char* fs_get_mimetype(FileHandler* fh) {
+    if (fh == NULL) return "No FileHandler";
+    if (fh->file_path == NULL) return "No file path";
+    return fs_get_mimetype_raw(fh->file_path);
+}
+
 
 void fs_read_filehandler(FileHandler* fh) {
     if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
