@@ -14,8 +14,6 @@
 #include <string.h>
 
 #define bool _Bool 
-#define false 1
-#define true 0
 
 #define WATCH_SIZE 16
 
@@ -295,6 +293,6 @@ size_t fs_dir_len (FileHandler* fh) {
 }
 
 void fs_memory_map_filehandler(FileHandler* fh) {
-    // add code later
+    // add code NOW
     return;
 }
