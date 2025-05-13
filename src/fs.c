@@ -39,8 +39,12 @@ void fs_init(bool watch) {
         callbacks = malloc(WATCH_SIZE * sizeof(callback_t));
         if (watches == NULL) error(-3, errno, "ERROR: failed to initialize inotify");
     }
-    magic_db = magic_open(MAGIC_CONTINUE|MAGIC_ERROR|MAGIC_MIME_TYPE);
+    magic_db = magic_open(MAGIC_CONTINUE|MAGIC_MIME_TYPE|MAGIC_NO_CHECK_COMPRESS);
     magic_load(magic_db, NULL);
+}
+
+void fs_terminate_magic() {
+    magic_close(magic_db);
 }
 
 void fs_terminate(bool watch) {
@@ -51,8 +55,8 @@ void fs_terminate(bool watch) {
             error(-1, errno, "ERROR: failed to terminate inotify");
         }
         free(watches);
+        fs_terminate_magic();
     }
-    magic_close(magic_db);
 }
 
 FileHandler* fs_create_filehandler(char* file_path, char* mode) {
@@ -210,9 +214,10 @@ char* fs_get_file_extension(const char* file_path) {
 }
 
 const char* fs_get_mimetype_raw(const char* path) {
-    const char* out = magic_file(magic_db, path);
+    char* mutable_path = strdup(path);
+    const char* out = magic_file(magic_db, mutable_path);
     if (strcmp(out, "text/plain") == 0 || strncmp(out, "application/json", 17)) {
-        char* file_ext = fs_get_file_extension(path);
+        char* file_ext = fs_get_file_extension(mutable_path);
         if (file_ext == NULL) return out;
         // clean up the switch
         switch (file_ext[0]) {
@@ -240,7 +245,8 @@ const char* fs_get_mimetype_raw(const char* path) {
                 break;
         }
     }
-    return out;
+    free(mutable_path);
+    return strdup(out);
 }
 
 const char* fs_get_mimetype(FileHandler* fh) {
@@ -286,11 +292,19 @@ size_t fs_dir_len (FileHandler* fh) {
     if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
     if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
     errno = 0;
-    seekdir(fh->directory_stream, SEEK_END);
-    size_t len = telldir(fh->directory_stream) - 1; // to ignore '.'
-    rewinddir(fh->directory_stream);
+    size_t len = 0;
+    struct dirent *entry;
+    DIR* dir = fh->directory_stream;
+    rewinddir(dir); // Start from the beginning
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        len++;
+    }
+    rewinddir(dir); // Reset to the beginning when done
     return len;
-}
+} // a faster approach for linux only is possible, implement it later
 
 void fs_memory_map_filehandler(FileHandler* fh) {
     // add code NOW

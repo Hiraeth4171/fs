@@ -43,6 +43,7 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode);
 void fs_destroy_filehandler(FileHandler* fh);
 int fs_watch_filehandler(FileHandler* fh, uint32_t mask, callback_t callback);
 void fs_terminate(_Bool watch);
+void fs_terminate_magic(void);
 int fs_start_watching(void); // spawns a thread for the event loop
 int fs_stop_watching(void); // spawns a thread for the event loop
 
