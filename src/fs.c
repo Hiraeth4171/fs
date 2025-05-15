@@ -29,6 +29,34 @@ callback_t *callbacks = NULL;
 pthread_t watch_thread_id;
 magic_t magic_db;
 
+char* mimetype_database = NULL;
+
+// void verify_magic_loading() {
+//     struct stat st;
+//     if (stat(mimetype_database, &st) != 0) {
+//         perror("Database file missing");
+//         exit(EXIT_FAILURE);
+//     }
+//     printf("Database size: %ld bytes\n", st.st_size);
+//
+//     // 2. Verify magic file signature
+//     FILE *f = fopen(mimetype_database, "rb");
+//     if (f) {
+//         char header[8];
+//         fread(header, 1, 8, f);
+//         fclose(f);
+//         printf("Magic header: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+//                header[0], header[1], header[2], header[3],
+//                header[4], header[5], header[6], header[7]);
+//     }
+//
+//     // 3. Force simple match test
+//     const char *teststr = "<html>";
+//     const char *result = magic_buffer(magic_db, teststr, strlen(teststr));
+//     printf("Test result: %s\n", result ? result : "NULL");
+//     printf("Last error: %s\n", magic_error(magic_db));
+// }
+
 void fs_init(bool watch) {
     if (watch) {
         inotify_fd = inotify_init();
@@ -39,12 +67,31 @@ void fs_init(bool watch) {
         callbacks = malloc(WATCH_SIZE * sizeof(callback_t));
         if (watches == NULL) error(-3, errno, "ERROR: failed to initialize inotify");
     }
-    magic_db = magic_open(MAGIC_CONTINUE|MAGIC_MIME_TYPE|MAGIC_NO_CHECK_COMPRESS);
-    magic_load(magic_db, NULL);
+    magic_db = magic_open(MAGIC_MIME_TYPE|MAGIC_ERROR);
+    if (!magic_db) {
+        fprintf(stderr, "Failed to initialize magic: %s\n", magic_error(magic_db));
+        return;
+    }
+    // if (mimetype_database != NULL) printf("Using database: %s\n", mimetype_database);
+    if (magic_load(magic_db, mimetype_database) != 0) {
+        fprintf(stderr, "Failed to load database: %s\n", magic_error(magic_db));
+        magic_close(magic_db);
+        magic_db = NULL;
+        return;
+    }
 }
 
 void fs_terminate_magic() {
     magic_close(magic_db);
+}
+
+void fs_set_custom_magic(char* path) {
+    char *resolved = realpath(path, NULL); // Use NULL to allocate
+    if (!resolved) {
+        perror("realpath failed");
+        return;
+    }
+    mimetype_database = resolved;
 }
 
 void fs_terminate(bool watch) {
@@ -214,39 +261,8 @@ char* fs_get_file_extension(const char* file_path) {
 }
 
 const char* fs_get_mimetype_raw(const char* path) {
-    char* mutable_path = strdup(path);
-    const char* out = magic_file(magic_db, mutable_path);
-    if (strcmp(out, "text/plain") == 0 || strncmp(out, "application/json", 17)) {
-        char* file_ext = fs_get_file_extension(mutable_path);
-        if (file_ext == NULL) return out;
-        // clean up the switch
-        switch (file_ext[0]) {
-            case 'h':
-                if (strcmp(file_ext, "html") == 0 || strcmp(file_ext, "htm") == 0) {
-                    free(file_ext);
-                    return "text/html";
-                }
-                break;
-            case 'c':
-                if (strcmp(file_ext, "css") == 0) {
-                    free(file_ext);
-                    return "text/css";
-                }
-                break;
-            case 'j': case 'm':
-                if (strcmp(file_ext, "json") == 0) {
-                    free(file_ext);
-                    return "application/json";
-                }
-                if (file_ext[1] == 's' || (file_ext[1] == 'j' && file_ext[2] == 's')) {
-                    free(file_ext);
-                    return "text/javascript";
-                }
-                break;
-        }
-    }
-    free(mutable_path);
-    return strdup(out);
+    const char* out = magic_file(magic_db, path);
+    return out ? strdup(out) : NULL;
 }
 
 const char* fs_get_mimetype(FileHandler* fh) {

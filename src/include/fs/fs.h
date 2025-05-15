@@ -38,6 +38,7 @@ struct ByteReader {
 
 typedef void (*callback_t)(struct inotify_event*, FileHandler*);
 
+void fs_set_custom_magic(char* path);
 void fs_init(_Bool watch);
 FileHandler* fs_create_filehandler(char* file_path, char* mode);
 void fs_destroy_filehandler(FileHandler* fh);
