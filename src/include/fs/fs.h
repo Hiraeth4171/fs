@@ -60,6 +60,7 @@ const char* fs_get_mimetype(FileHandler* fh);
 void fs_read_filehandler(FileHandler* fh);
 void fs_delete_file(FileHandler* fh);
 char* fs_stream_from_dir(FileHandler* fh);
+void fs_dir_apply_callback(FileHandler* fh, void (*func) (struct dirent*), char* prefix)
 size_t fs_dir_len(FileHandler* fh);
 void fs_memory_map_filehandler(FileHandler* fh);
 
