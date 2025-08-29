@@ -313,7 +313,8 @@ char* fs_stream_from_dir(FileHandler* fh) {
     return _dir->d_name;
 }
 
-void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*), char* prefix) {
+void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, void*),
+        void* ctx1, void* ctx2, char* prefix) {
     if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
     if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
     errno = 0;
@@ -334,10 +335,10 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*), char* 
                 if (prefix[prefix_len] == '/') strcat(prefix, "/");
                 strcat(prefix, subdir->file_name);
             }
-            fs_dir_apply_callback(subdir, func, prefix);
+            fs_dir_apply_callback(subdir, func, ctx1, ctx2, prefix);
         }
         else {
-            func(_dir);
+            func(_dir, ctx1, ctx2);
         }
     }
     if (_dir == NULL) {
