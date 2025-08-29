@@ -8,6 +8,7 @@
 
 #include <sys/inotify.h>
 #include <sys/stat.h>
+#include <libgen.h>
 
 #include <pthread.h>
 #include <magic.h>
@@ -143,6 +144,7 @@ FileHandler* fs_create_filehandler(char* file_path, char* mode) {
         fh->directory_stream = NULL;
     }
     fh->file_path = file_path;
+    fh->file_name = basename(strdup(file_path));
     return fh;
 }
 
@@ -302,8 +304,43 @@ char* fs_stream_from_dir(FileHandler* fh) {
         if (errno != 0) error(0, errno, "ERROR: directory read failed: %d", errno);
         return NULL;
     }
+    if (_dir->d_type == DT_DIR) {
+        
+    }
     return _dir->d_name;
 }
+
+void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*), char* prefix) {
+    if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
+    if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
+    errno = 0;
+    struct dirent* _dir = readdir(fh->directory_stream);
+    if (_dir == NULL) {
+        if (errno != 0) error(0, errno, "ERROR: directory read failed: %d", errno);
+        return;
+    }
+    if (_dir->d_type == DT_DIR) {
+        int len = strlen(fh->file_path) + strlen(_dir->d_name) + 1;
+        char* final = malloc(len);
+        realpath(fh->file_path, final);
+        strcat(final,_dir->d_name);
+        final[len-1] = '\0';
+        FileHandler* subdir = fs_create_filehandler(final, "r");
+        if (prefix == NULL) {
+            prefix = strdup(fh->file_name);
+        } else {
+            int prefix_len = strlen(prefix);
+            prefix = realloc(prefix, prefix_len + strlen(subdir->file_name)+2);
+            if (prefix[prefix_len] == '/') strcat(prefix, "/");
+            strcat(prefix, subdir->file_name);
+        }
+        fs_dir_apply_callback(subdir, func, prefix);
+    }
+    else {
+        func(_dir);
+    }
+}
+
 size_t fs_dir_len (FileHandler* fh) {
     if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
     if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");

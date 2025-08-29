@@ -20,6 +20,7 @@
 typedef struct FileHandler FileHandler;
 struct FileHandler {
     FILE* fd;
+    const char* file_name;
     const char* file_path;
     short i;
     int wd[WD_LIMIT_PER_FILE];
