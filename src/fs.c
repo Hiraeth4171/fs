@@ -335,7 +335,7 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, 
                 temp = strdup(prefix);
             }
             prefix = realloc(prefix, prefix_len + strlen(subdir->file_name)+2);
-            strcat(prefix, subdir->file_name);
+            strcpy(prefix, subdir->file_name);
             strcat(prefix, "/");
             fs_dir_apply_callback(subdir, func, ctx1, ctx2, prefix);
             prefix = temp;
