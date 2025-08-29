@@ -320,6 +320,7 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, 
     errno = 0;
     struct dirent* _dir = readdir(fh->directory_stream);
     while (_dir != NULL) {
+        if (_dir->d_name[0] == '.') continue; // ignore dot-first files
         if (_dir->d_type == DT_DIR) {
             int len = strlen(fh->file_path) + strlen(_dir->d_name) + 1;
             char* final = malloc(len);
@@ -336,6 +337,7 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, 
         else {
             func(_dir, ctx1, ctx2);
         }
+        _dir = readdir(fh->directory_stream);
     }
     if (_dir == NULL) {
         if (errno != 0) error(0, errno, "ERROR: directory read failed: %d", errno);
