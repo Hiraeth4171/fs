@@ -313,30 +313,37 @@ char* fs_stream_from_dir(FileHandler* fh) {
     return _dir->d_name;
 }
 
-void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, void*),
+void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, void*, char* prefix),
         void* ctx1, void* ctx2, char* prefix) {
     if (fh == NULL) error(-3, 0, "ERROR: filehandler you were trying to read is NULL");
     if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
     errno = 0;
     struct dirent* _dir = readdir(fh->directory_stream);
     while (_dir != NULL) {
-        if (_dir->d_name[0] == '.') continue; // ignore dot-first files
+        if (_dir->d_name[0] == '.') goto progress; // ignore dot-first files
         if (_dir->d_type == DT_DIR) {
-            int len = strlen(fh->file_path) + strlen(_dir->d_name) + 1;
-            char* final = malloc(len);
+            char final[256];
             realpath(fh->file_path, final);
+            strcat(final, "/");
             strcat(final,_dir->d_name);
-            final[len-1] = '\0';
+            final[strlen(final)] = '\0';
             FileHandler* subdir = fs_create_filehandler(final, "r");
-            int prefix_len = strlen(prefix);
+            int prefix_len = 0;
+            char* temp;
+            if (prefix != NULL) {
+                prefix_len = strlen(prefix);
+                temp = strdup(prefix);
+            }
             prefix = realloc(prefix, prefix_len + strlen(subdir->file_name)+2);
             if (prefix[prefix_len] == '/') strcat(prefix, "/");
             strcat(prefix, subdir->file_name);
             fs_dir_apply_callback(subdir, func, ctx1, ctx2, prefix);
+            prefix = temp;
         }
         else {
-            func(_dir, ctx1, ctx2);
+            func(_dir, ctx1, ctx2, prefix);
         }
+progress:
         _dir = readdir(fh->directory_stream);
     }
     if (_dir == NULL) {
