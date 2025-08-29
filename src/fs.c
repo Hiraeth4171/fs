@@ -327,14 +327,10 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, 
             strcat(final,_dir->d_name);
             final[len-1] = '\0';
             FileHandler* subdir = fs_create_filehandler(final, "r");
-            if (prefix == NULL) {
-                prefix = strdup(fh->file_name);
-            } else {
-                int prefix_len = strlen(prefix);
-                prefix = realloc(prefix, prefix_len + strlen(subdir->file_name)+2);
-                if (prefix[prefix_len] == '/') strcat(prefix, "/");
-                strcat(prefix, subdir->file_name);
-            }
+            int prefix_len = strlen(prefix);
+            prefix = realloc(prefix, prefix_len + strlen(subdir->file_name)+2);
+            if (prefix[prefix_len] == '/') strcat(prefix, "/");
+            strcat(prefix, subdir->file_name);
             fs_dir_apply_callback(subdir, func, ctx1, ctx2, prefix);
         }
         else {
