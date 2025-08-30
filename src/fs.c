@@ -346,9 +346,7 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, 
 progress:
         _dir = readdir(fh->directory_stream);
     }
-    if (_dir == NULL) {
-        if (errno != 0) error(0, errno, "ERROR: directory read failed: %d", errno);
-    }
+    if (errno != 0) error(0, errno, "ERROR: directory read failed: %d", errno);
 }
 
 size_t fs_dir_len (FileHandler* fh) {
