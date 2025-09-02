@@ -330,7 +330,7 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, 
             final[strlen(final)] = '\0';
             FileHandler* subdir = fs_create_filehandler(final, "r");
             int prefix_len = 0;
-            char* temp;
+            char* temp = NULL;
             if (prefix != NULL) {
                 prefix_len = strlen(prefix);
                 temp = strdup(prefix);
