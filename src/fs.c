@@ -319,6 +319,7 @@ void fs_dir_apply_callback(FileHandler* fh, void (*func)(struct dirent*, void*, 
     if (fh->directory_stream == NULL) error(-3, 0, "ERROR: filehandler directory you were trying to stream is NULL");
     errno = 0;
     struct dirent* _dir = readdir(fh->directory_stream);
+    errno = 0;
     while (_dir != NULL) {
         if (_dir->d_name[0] == '.') goto progress; // ignore dot-first files
         if (_dir->d_type == DT_DIR) {
