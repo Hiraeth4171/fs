@@ -164,6 +164,7 @@ ByteReader* fs_create_byte_reader(const char* file_path) {
 void* fs_br_read(ByteReader* byte_reader, size_t n) {
     if (byte_reader->_offset+n > byte_reader->fh->size) {
         n = byte_reader->fh->size - byte_reader->_offset;
+        if (n < 0) return NULL;
     } // trim end if overflow'd
     char* _res = malloc(n);
     mem_read(_res, byte_reader->_start+byte_reader->_offset, n);
