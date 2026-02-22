@@ -214,6 +214,7 @@ void *fs_callback_event(void *_event) {
     pthread_detach(pthread_self());
     struct inotify_event *event = (struct inotify_event *) _event;
     callbacks[event->wd-1](event, watches[event->wd-1]);
+    free(event);
     pthread_exit(NULL);
 }
 
@@ -230,8 +231,11 @@ void *fs_watch_thread_func(void *arg) {
         if (len <= 0) break;
         for (char *ptr = buff; ptr < buff + len; ptr += sizeof(struct inotify_event) + event->len) {
             event = (struct inotify_event*) ptr;
+            size_t event_size = sizeof(struct inotify_event) + event->len;
+            struct inotify_event *event_copy = malloc(event_size);
+            memcpy(event_copy, event, event_size);
             pthread_t pstid;
-            pthread_create(&pstid, NULL, fs_callback_event, (void*)event);
+            pthread_create(&pstid, NULL, fs_callback_event, (void*)event_copy);
         }
     }
     pthread_exit(NULL);
